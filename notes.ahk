@@ -16,8 +16,8 @@ StringReplace, notesPath, notesPath, ~, %vUserProfile%, All
 
 ^Numpad4::
 Gui, Font, s12 c444444
-Gui, Add, Edit, r9 w550 vNote WantTab, %Clipboard%
-Gui, Add, Button, w550 h50, OK
+Gui, Add, Edit, r24 w800 vNote WantTab, %Clipboard%
+Gui, Add, Button, w800 h50, OK
 
 Gui, Show,, Quick Note
 return

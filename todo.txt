@@ -1,5 +1,5 @@
-x 2023-09-14 2023-09-01 I want to have a hotkey to pull a random joke
-x 2023-08-28 2023-08-28 I want to run the scripts on multiple computers
-x 2023-08-22 2023-08-22 I want to capture notes easily from anywhere
 2023-09-26 I want custom icons for auto-hotkey scripts
-2023-09-29 I want the quicknotes area to be larger
+x 2023-08-22 2023-08-22 I want to capture notes easily from anywhere
+x 2023-08-28 2023-08-28 I want to run the scripts on multiple computers
+x 2023-09-14 2023-09-01 I want to have a hotkey to pull a random joke
+x 2023-10-13 2023-09-29 I want the quicknotes area to be larger
