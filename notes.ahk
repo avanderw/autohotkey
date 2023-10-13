@@ -4,6 +4,8 @@
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 EnvGet, vUserProfile, USERPROFILE
+Menu, Tray, Icon, file-text.ico
+Menu, Tray, Tip, Quick Notes
 
 IniRead, notesPath, settings.ini, Environment, notes-path
 if (notesPath="ERROR") {

@@ -4,6 +4,8 @@
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 EnvGet, vUserProfile, USERPROFILE
+Menu, Tray, Icon, check-square.ico
+Menu, Tray, Tip, Quick Tasks
 
 IniRead, inbox, settings.ini, Environment, task-inbox
 if (inbox="ERROR") {
