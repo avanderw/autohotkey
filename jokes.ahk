@@ -20,4 +20,5 @@ Loop, Read, %jokesPath%
 
 Random, idx, 1, %numlines%
 FileReadLine, joke, %jokesPath%, idx
+Clipboard:=joke
 Msgbox, %joke%
