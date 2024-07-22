@@ -30,7 +30,6 @@ They are intended to be my replacement for org-mode in emacs.
 |CTRL+SHIFT+D|Send the isodate to the cursor position|
 |CTRL+SHIFT+T|Send the isotime to the cursor position|
 
-
 ## settings.ini
 
 ```ini

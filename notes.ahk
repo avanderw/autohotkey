@@ -17,6 +17,7 @@ if (notesPath="ERROR") {
 StringReplace, notesPath, notesPath, ~, %vUserProfile%, All
 
 ^Numpad4::
+Start := A_TickCount
 Gui, Font, s12 c444444
 Gui, Add, Edit, r24 w800 vNote WantTab, %Clipboard%
 Gui, Add, Button, w800 h50, OK
@@ -26,6 +27,8 @@ return
 
 ButtonOK:
 Gui, Submit
+Duration := Round((A_TickCount - Start)/1000, 1)
+Note := Note . "`n`nTook " . Duration . "s to write`n"
 FileAppend, %Note%, %notesPath%\%A_YYYY%%A_MM%%A_DD%T%A_Hour%%A_Min%%A_Sec%.md
 
 GuiEscape:
