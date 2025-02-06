@@ -35,32 +35,6 @@ FormatTime, AddedDate,, yyyy-MM-dd
 FileAppend, %AddedDate% %task%`r`n, %inbox%
 return
 
-^Numpad1:: ; refile task to category file
-IniRead, refileCategory, settings.ini, Cache, task-refile-category
-clipboard := ""
-Send {HOME}
-Send {SHIFTDOWN}{DOWN}
-Send ^c
-Sleep, 750
-task := Clipboard
-InputBox, category, Refile Task (default: %refileCategory%), Enter the refile category
-if ErrorLevel
-    Goto, CleanupRefile
-if (Trim(category)="") {
-    if (refileCategory="")
-        Goto, CleanupRefile
-    category := refileCategory
-}
-IniWrite, %category%, settings.ini, Cache, task-refile-category
-FileAppend, %task%, %refilePath%\%category%.todo.txt
-if ErrorLevel
-    Goto, CleanupRefile
-Send {DEL}
-CleanupRefile:
-Send {SHIFTUP}
-Send {HOME}
-return
-
 ^Numpad3:: ; open tasks folder
 Run, %refilePath%
 return
