@@ -30,9 +30,34 @@ return
 
 ButtonOK:
 Gui, Submit
-Duration := Round((A_TickCount - Start)/1000, 1)
-Note := Note . "`n*--Took " . Duration . "s to write--*`n"
-FileAppend, %Note%, %notesPath%\%A_YYYY%%A_MM%%A_DD%T%A_Hour%%A_Min%%A_Sec%.md
+Duration := Round((A_TickCount - Start)/1000, 0)
+Minutes := Floor(Duration / 60)
+Seconds := Mod(Duration, 60)
+DurationText := (Minutes > 0 ? Minutes . "m " : "") . Seconds . "s"
+Note := Note . "`n`n*--Took " . DurationText . " to write--*`n"
+
+; Extract title from first line if it's a markdown H1
+fileName := A_YYYY . A_MM . A_DD . "T" . A_Hour . A_Min . A_Sec
+firstLine := ""
+Loop, Parse, Note, `n, `r
+{
+    firstLine := A_LoopField
+    break
+}
+
+if (SubStr(firstLine, 1, 2) = "# ") {
+    title := SubStr(firstLine, 3)
+    ; Convert to lowercase and replace spaces with hyphens
+    StringLower, title, title
+    StringReplace, title, title, %A_Space%, -, All
+    ; Remove any characters that aren't alphanumeric, hyphens, or underscores
+    title := RegExReplace(title, "[^a-z0-9\-_]", "")
+    if (title != "") {
+        fileName := fileName . "_" . title
+    }
+}
+
+FileAppend, %Note%, %notesPath%\%fileName%.md
 
 GuiEscape:
 GuiClose:
