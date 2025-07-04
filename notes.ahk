@@ -34,11 +34,11 @@ Duration := Round((A_TickCount - Start)/1000, 0)
 Minutes := Floor(Duration / 60)
 Seconds := Mod(Duration, 60)
 DurationText := (Minutes > 0 ? Minutes . "m " : "") . Seconds . "s"
-Note := Note . "`n`n*--Took " . DurationText . " to write--*`n"
 
-; Extract title from first line if it's a markdown H1
+; Extract title from first line if it's a markdown H1 (before adding front-matter)
 fileName := A_YYYY . A_MM . A_DD . "T" . A_Hour . A_Min . A_Sec
 firstLine := ""
+noteTitle := ""
 Loop, Parse, Note, `n, `r
 {
     firstLine := A_LoopField
@@ -46,8 +46,9 @@ Loop, Parse, Note, `n, `r
 }
 
 if (SubStr(firstLine, 1, 2) = "# ") {
-    title := SubStr(firstLine, 3)
-    ; Convert to lowercase and replace spaces with hyphens
+    noteTitle := SubStr(firstLine, 3)
+    ; Create clean filename from title
+    title := noteTitle
     StringLower, title, title
     StringReplace, title, title, %A_Space%, -, All
     ; Remove any characters that aren't alphanumeric, hyphens, or underscores
@@ -56,6 +57,20 @@ if (SubStr(firstLine, 1, 2) = "# ") {
         fileName := fileName . "_" . title
     }
 }
+
+; Create YAML front-matter with title
+createdDate := A_YYYY . "-" . A_MM . "-" . A_DD
+createdTime := A_Hour . ":" . A_Min . ":" . A_Sec
+createdDateTime := createdDate . "T" . createdTime
+frontMatter := "---`n"
+if (noteTitle != "") {
+    frontMatter .= "title: " . noteTitle . "`n"
+}
+frontMatter .= "created: " . createdDateTime . "`n"
+frontMatter .= "duration: " . DurationText . "`n"
+frontMatter .= "---`n`n"
+
+Note := frontMatter . Note
 
 FileAppend, %Note%, %notesPath%\%fileName%.md
 
