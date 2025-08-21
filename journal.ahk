@@ -18,18 +18,55 @@ StringReplace, journalPath, journalPath, ~, %vUserProfile%, All
 ; Create journal directory if it doesn't exist
 FileCreateDir, %journalPath%
 
-; Set up daily timer for 15:00 (3:00 PM)
-currentTime := A_Hour * 3600 + A_Min * 60 + A_Sec
-targetTime := 15 * 3600
-secondsUntilTarget := targetTime - currentTime
+; Initialize variables for reliable daily prompts
+lastCheckTime := A_Now
+promptShownToday := false
+todayDateKey := A_YYYY . A_MM . A_DD
 
-if (secondsUntilTarget <= 0) {
-    secondsUntilTarget += 24 * 3600
+; Check if we already showed prompt today (in case of script restart)
+IniRead, lastPromptDate, settings.ini, Journal, last-prompt-date
+if (lastPromptDate = todayDateKey) {
+    promptShownToday := true
 }
 
-millisecondsUntilTarget := secondsUntilTarget * 1000
-SetTimer, ShowJournalPrompt, %millisecondsUntilTarget%
+; Check immediately if we missed today's 15:00 prompt
+Gosub, CheckForJournalTime
 
+; Set up timer to check every minute for 15:00
+SetTimer, CheckForJournalTime, 60000
+
+return
+
+CheckForJournalTime:
+currentTime := A_Now
+todayDateKey := A_YYYY . A_MM . A_DD
+currentHour := A_Hour + 0
+currentMinute := A_Min + 0
+
+; Detect if system was asleep (more than 5 minutes since last check)
+timeDiff := currentTime
+timeDiff -= lastCheckTime, Seconds
+if (timeDiff > 300) {  ; More than 5 minutes gap indicates sleep/suspend
+    ; Reset prompt flag if we crossed into a new day during sleep
+    IniRead, lastPromptDate, settings.ini, Journal, last-prompt-date
+    if (lastPromptDate != todayDateKey) {
+        promptShownToday := false
+    }
+}
+
+; Check if it's time for the journal prompt (15:00 or later, but before 23:59)
+if (currentHour >= 15 && !promptShownToday) {
+    promptShownToday := true
+    IniWrite, %todayDateKey%, settings.ini, Journal, last-prompt-date
+    Gosub, ShowJournalPrompt
+}
+
+; Reset flag at midnight for next day
+if (currentHour = 0 && currentMinute < 2 && promptShownToday) {
+    promptShownToday := false
+}
+
+lastCheckTime := currentTime
 return
 
 ShowJournalPrompt:
@@ -72,6 +109,8 @@ return
 
 RemindLater:
 Gui, Destroy
+; Reset the flag so CheckForJournalTime can trigger again
+promptShownToday := false
 SetTimer, ShowJournalPrompt, 1800000
 MsgBox, 64, Reminder Set, I will remind you again in 30 minutes.
 return
