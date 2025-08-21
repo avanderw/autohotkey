@@ -5,7 +5,7 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 EnvGet, vUserProfile, USERPROFILE
 Menu, Tray, Icon, file-text.ico
-Menu, Tray, Tip, Quick Notes
+Menu, Tray, Tip, Enhanced Notes
 
 IniRead, notesPath, settings.ini, Environment, notes-path
 if (notesPath="ERROR") {
@@ -17,37 +17,119 @@ if (notesPath="ERROR") {
 StringReplace, notesPath, notesPath, ~, %vUserProfile%, All
 
 GuiCount := 1
+
+; Enhanced note hotkey (replaces quick note)
 ^Numpad4::
-Start := A_TickCount
+Gosub, ShowEnhancedNote
+return
 
-Gui, %GuiCount%:Font, s12 c444444
-Gui, %GuiCount%:Add, Edit, r24 w800 vNote WantTab, %Clipboard%
-Gui, %GuiCount%:Add, Button, w800 h50, OK
+ShowEnhancedNote:
+CurrentGui := GuiCount
+Start%CurrentGui% := A_TickCount
 
-Gui, %GuiCount%:Show,, Quick Note
+Gui, %CurrentGui%:New
+Gui, %CurrentGui%:Font, s10
+
+; Timer display (replaces Content label)
+Gui, %CurrentGui%:Add, Text, x20 y15 w200 vTimer%CurrentGui%, Write time: 0s
+
+; Main content
+Gui, %CurrentGui%:Add, Edit, x20 y35 w800 h490 vNote WantTab VScroll, %Clipboard%
+
+; Action buttons  
+Gui, %CurrentGui%:Add, Button, x600 y535 w100 h35 gSaveNote, Save Note
+Gui, %CurrentGui%:Add, Button, x710 y535 w90 h35 gCancelNote, Cancel
+
+Gui, %CurrentGui%:Show, w820 h585, Quick Note
+SetTimer, UpdateTimer%CurrentGui%, 1000
 GuiCount := GuiCount + 1
 return
 
-ButtonOK:
-Gui, Submit
-Duration := Round((A_TickCount - Start)/1000, 0)
-Minutes := Floor(Duration / 60)
-Seconds := Mod(Duration, 60)
-DurationText := (Minutes > 0 ? Minutes . "m " : "") . Seconds . "s"
+; Create dynamic timer function
+UpdateTimer1:
+UpdateTimer2:
+UpdateTimer3:
+UpdateTimer4:
+UpdateTimer5:
+UpdateTimer6:
+UpdateTimer7:
+UpdateTimer8:
+UpdateTimer9:
+; Extract GUI number from timer label
+currentTimer := A_ThisLabel
+guiNum := RegExReplace(currentTimer, "UpdateTimer", "")
+startTime := Start%guiNum%
+elapsed := Round((A_TickCount - startTime)/1000, 0)
+hours := Floor(elapsed / 3600)
+minutes := Floor((elapsed - hours * 3600) / 60)
+seconds := Mod(elapsed, 60)
+if (hours > 0) {
+    timeText := hours . "h " . minutes . "m " . seconds . "s"
+} else if (minutes > 0) {
+    timeText := minutes . "m " . seconds . "s"
+} else {
+    timeText := seconds . "s"
+}
+GuiControl, %guiNum%:, Timer%guiNum%, Write time: %timeText%
+return
 
-; Extract title from first line if it's a markdown H1 (before adding front-matter)
-fileName := A_YYYY . A_MM . A_DD . "T" . A_Hour . A_Min . A_Sec
-firstLine := ""
-noteTitle := ""
-Loop, Parse, Note, `n, `r
-{
-    firstLine := A_LoopField
-    break
+SaveNote:
+; Stop the timer for this GUI
+currentTimer := "UpdateTimer" . A_Gui
+SetTimer, %currentTimer%, Off
+Gui, Submit
+Gosub, ProcessNote
+return
+
+CancelNote:
+; Stop the timer for this GUI
+currentTimer := "UpdateTimer" . A_Gui
+SetTimer, %currentTimer%, Off
+Gui, Destroy
+return
+
+ProcessNote:
+startTime := Start%A_Gui%
+Duration := Round((A_TickCount - startTime)/1000, 0)
+Hours := Floor(Duration / 3600)
+Minutes := Floor((Duration - Hours * 3600) / 60)
+Seconds := Mod(Duration, 60)
+
+if (Hours > 0) {
+    DurationText := Hours . "h " . Minutes . "m " . Seconds . "s"
+} else if (Minutes > 0) {
+    DurationText := Minutes . "m " . Seconds . "s"
+} else {
+    DurationText := Seconds . "s"
 }
 
-if (SubStr(firstLine, 1, 2) = "# ") {
-    noteTitle := SubStr(firstLine, 3)
-    ; Create clean filename from title
+finalNote := Note
+
+; Extract title from first line of content (always automated)
+noteTitle := ""
+if (finalNote != "") {
+    Loop, Parse, finalNote, `n, `r
+    {
+        firstLine := Trim(A_LoopField)
+        if (firstLine != "") {
+            ; Remove markdown header symbols
+            if (SubStr(firstLine, 1, 4) = "### ") {
+                noteTitle := Trim(SubStr(firstLine, 5))
+            } else if (SubStr(firstLine, 1, 3) = "## ") {
+                noteTitle := Trim(SubStr(firstLine, 4))
+            } else if (SubStr(firstLine, 1, 2) = "# ") {
+                noteTitle := Trim(SubStr(firstLine, 3))
+            } else {
+                noteTitle := firstLine
+            }
+            break
+        }
+    }
+}
+
+; Create clean filename from title
+fileName := A_YYYY . A_MM . A_DD . "T" . A_Hour . A_Min . A_Sec
+if (noteTitle != "") {
     title := noteTitle
     StringLower, title, title
     StringReplace, title, title, %A_Space%, -, All
@@ -58,35 +140,32 @@ if (SubStr(firstLine, 1, 2) = "# ") {
     }
 }
 
-; Generate short hash for unique identifier using hex characters
-hashSource := StrLen(Note) . A_TickCount . A_MSec  ; Use note length + precise timing
-Random, randNum, 1000, 9999  ; Add some randomness
+; Generate short hash for unique identifier
+hashSource := StrLen(finalNote) . A_TickCount . A_MSec
+Random, randNum, 1000, 9999
 hashSource .= randNum
 
-; Convert to hex-like representation
 shortHash := ""
 Loop, 8 {
     Random, hexDigit, 0, 15
     if (hexDigit < 10) {
         shortHash .= hexDigit
     } else {
-        shortHash .= Chr(87 + hexDigit)  ; Convert 10-15 to a-f
+        shortHash .= Chr(87 + hexDigit)
     }
 }
 
-; Add short hash to filename
 fileName := fileName . "_" . shortHash
 
-; Calculate estimated reading time
+; Calculate word count and reading time
 wordCount := 0
-Loop, Parse, Note, %A_Space%%A_Tab%`n`r
+Loop, Parse, finalNote, %A_Space%%A_Tab%`n`r
 {
     if (A_LoopField != "") {
         wordCount++
     }
 }
 
-; Calculate reading time (225 words per minute average)
 readingTimeMinutes := wordCount / 225
 if (readingTimeMinutes < 1) {
     readingTimeSeconds := Round(readingTimeMinutes * 60, 0)
@@ -96,10 +175,11 @@ if (readingTimeMinutes < 1) {
     readTimeText := readingTimeRounded . "m"
 }
 
-; Create YAML front-matter with title
+; Create enhanced YAML front-matter
 createdDate := A_YYYY . "-" . A_MM . "-" . A_DD
 createdTime := A_Hour . ":" . A_Min . ":" . A_Sec
 createdDateTime := createdDate . "T" . createdTime
+
 frontMatter := "---`n"
 if (noteTitle != "") {
     frontMatter .= "title: " . noteTitle . "`n"
@@ -107,15 +187,30 @@ if (noteTitle != "") {
 frontMatter .= "created: " . createdDateTime . "`n"
 frontMatter .= "write_time: " . DurationText . "`n"
 frontMatter .= "read_time: " . readTimeText . "`n"
-frontMatter .= "id: " . shortHash . "`n"  ; Add the hash ID to front-matter too
+frontMatter .= "word_count: " . wordCount . "`n"
+frontMatter .= "id: " . shortHash . "`n"
 frontMatter .= "---`n`n"
 
-Note := frontMatter . Note
+finalNote := frontMatter . finalNote
+FileAppend, %finalNote%, %notesPath%\%fileName%.md
 
-FileAppend, %Note%, %notesPath%\%fileName%.md
+MsgBox, 64, Note Saved, Note saved successfully as %fileName%.md
+return
+
+CancelEnhanced:
+EnhancedGuiClose:
+EnhancedGuiEscape:
+; Stop any active timer for this GUI
+currentTimer := "UpdateTimer" . A_Gui
+SetTimer, %currentTimer%, Off
+Gui, Destroy
+return
 
 GuiEscape:
 GuiClose:
+; Stop any active timer for this GUI
+currentTimer := "UpdateTimer" . A_Gui
+SetTimer, %currentTimer%, Off
 Gui, Destroy
-GuiCount := GuiCount -1
+GuiCount := GuiCount - 1
 return
