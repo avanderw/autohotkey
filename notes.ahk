@@ -58,6 +58,44 @@ if (SubStr(firstLine, 1, 2) = "# ") {
     }
 }
 
+; Generate short hash for unique identifier using hex characters
+hashSource := StrLen(Note) . A_TickCount . A_MSec  ; Use note length + precise timing
+Random, randNum, 1000, 9999  ; Add some randomness
+hashSource .= randNum
+
+; Convert to hex-like representation
+shortHash := ""
+Loop, 8 {
+    Random, hexDigit, 0, 15
+    if (hexDigit < 10) {
+        shortHash .= hexDigit
+    } else {
+        shortHash .= Chr(87 + hexDigit)  ; Convert 10-15 to a-f
+    }
+}
+
+; Add short hash to filename
+fileName := fileName . "_" . shortHash
+
+; Calculate estimated reading time
+wordCount := 0
+Loop, Parse, Note, %A_Space%%A_Tab%`n`r
+{
+    if (A_LoopField != "") {
+        wordCount++
+    }
+}
+
+; Calculate reading time (225 words per minute average)
+readingTimeMinutes := wordCount / 225
+if (readingTimeMinutes < 1) {
+    readingTimeSeconds := Round(readingTimeMinutes * 60, 0)
+    readTimeText := readingTimeSeconds . "s"
+} else {
+    readingTimeRounded := Round(readingTimeMinutes, 1)
+    readTimeText := readingTimeRounded . "m"
+}
+
 ; Create YAML front-matter with title
 createdDate := A_YYYY . "-" . A_MM . "-" . A_DD
 createdTime := A_Hour . ":" . A_Min . ":" . A_Sec
@@ -67,7 +105,9 @@ if (noteTitle != "") {
     frontMatter .= "title: " . noteTitle . "`n"
 }
 frontMatter .= "created: " . createdDateTime . "`n"
-frontMatter .= "duration: " . DurationText . "`n"
+frontMatter .= "write_time: " . DurationText . "`n"
+frontMatter .= "read_time: " . readTimeText . "`n"
+frontMatter .= "id: " . shortHash . "`n"  ; Add the hash ID to front-matter too
 frontMatter .= "---`n`n"
 
 Note := frontMatter . Note
