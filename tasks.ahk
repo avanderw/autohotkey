@@ -1,12 +1,13 @@
 ﻿#SingleInstance Force
-#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
-; #Warn  ; Enable warnings to assist with detecting common errors.
-SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
-SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
+#NoEnv
+SendMode Input
+SetWorkingDir %A_ScriptDir%
 EnvGet, vUserProfile, USERPROFILE
+
 Menu, Tray, Icon, check-square.ico
 Menu, Tray, Tip, Quick Tasks
 
+; Read settings
 IniRead, inbox, settings.ini, Environment, task-inbox
 if (inbox="ERROR") {
     InputBox, inbox, Task Inbox Path, Enter the path to your task inbox
@@ -25,16 +26,25 @@ if (refilePath="ERROR") {
 }
 StringReplace, refilePath, refilePath, ~, %vUserProfile%, All
 
-^Numpad0:: ; add task to inbox
-InputBox, task, Add Task, Enter the task you want to complete
-if ErrorLevel
-    return
-if (Trim(task)="")
-    return
-FormatTime, AddedDate,, yyyy-MM-dd
-FileAppend, %AddedDate% %task%`r`n, %inbox%
+^Numpad0:: ; add task via simple input box with priority parsing
+    InputBox, task, Add Task, Enter task (start with (A) for priority)
+    if ErrorLevel
+        return
+    if (Trim(task)="")
+        return
+        
+    FormatTime, AddedDate,, yyyy-MM-dd
+    
+    ; Check for priority pattern (X) at start
+    if RegExMatch(task, "^\(([A-Z])\)\s*(.*)$", match) {
+        task := "(" match1 ") " AddedDate " " match2
+    } else {
+        task := AddedDate " " task
+    }
+    
+    FileAppend, %task%`r`n, %inbox%
 return
 
-^Numpad3:: ; open tasks folder
-Run, %refilePath%
+^Numpad3::
+    Run, %refilePath%
 return
