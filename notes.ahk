@@ -159,12 +159,17 @@ Loop, Parse, finalNote, %A_Space%%A_Tab%`n`r
 }
 
 readingTimeMinutes := wordCount / 225
-if (readingTimeMinutes < 1) {
-    readingTimeSeconds := Round(readingTimeMinutes * 60, 0)
-    readTimeText := readingTimeSeconds . "s"
+readingTimeSeconds := Round(readingTimeMinutes * 60, 0)
+readingHours := Floor(readingTimeSeconds / 3600)
+readingMins := Floor((readingTimeSeconds - readingHours * 3600) / 60)
+readingSecs := Mod(readingTimeSeconds, 60)
+
+if (readingHours > 0) {
+    readTimeText := readingHours . "h " . readingMins . "m " . readingSecs . "s"
+} else if (readingMins > 0) {
+    readTimeText := readingMins . "m " . readingSecs . "s"
 } else {
-    readingTimeRounded := Round(readingTimeMinutes, 1)
-    readTimeText := readingTimeRounded . "m"
+    readTimeText := readingSecs . "s"
 }
 
 ; Create enhanced YAML front-matter
