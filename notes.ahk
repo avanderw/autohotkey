@@ -174,7 +174,14 @@ createdDateTime := createdDate . "T" . createdTime
 
 frontMatter := "---`n"
 if (noteTitle != "") {
-    frontMatter .= "title: " . noteTitle . "`n"
+    ; Clean title for YAML frontmatter - remove colons and other problematic characters
+    cleanTitle := noteTitle
+    StringReplace, cleanTitle, cleanTitle, :, -, All
+    StringReplace, cleanTitle, cleanTitle, ", ', All
+    StringReplace, cleanTitle, cleanTitle, `, , -, All
+    cleanTitle := RegExReplace(cleanTitle, "[#\[\]{}|>]", "")
+    cleanTitle := Trim(cleanTitle)
+    frontMatter .= "title: " . cleanTitle . "`n"
 }
 frontMatter .= "created: " . createdDateTime . "`n"
 frontMatter .= "write_time: " . DurationText . "`n"
