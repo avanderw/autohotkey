@@ -41,50 +41,42 @@ Gui, %CurrentGui%:Add, Button, x600 y535 w100 h35 gSaveNote, Save Note
 Gui, %CurrentGui%:Add, Button, x710 y535 w90 h35 gCancelNote, Cancel
 
 Gui, %CurrentGui%:Show, w820 h585, Quick Note
-SetTimer, UpdateTimer%CurrentGui%, 1000
+SetTimer, UpdateAllTimers, 1000
 GuiCount := GuiCount + 1
 return
 
-; Create dynamic timer function
-UpdateTimer1:
-UpdateTimer2:
-UpdateTimer3:
-UpdateTimer4:
-UpdateTimer5:
-UpdateTimer6:
-UpdateTimer7:
-UpdateTimer8:
-UpdateTimer9:
-; Extract GUI number from timer label
-currentTimer := A_ThisLabel
-guiNum := RegExReplace(currentTimer, "UpdateTimer", "")
-startTime := Start%guiNum%
-elapsed := Round((A_TickCount - startTime)/1000, 0)
-hours := Floor(elapsed / 3600)
-minutes := Floor((elapsed - hours * 3600) / 60)
-seconds := Mod(elapsed, 60)
-if (hours > 0) {
-    timeText := hours . "h " . minutes . "m " . seconds . "s"
-} else if (minutes > 0) {
-    timeText := minutes . "m " . seconds . "s"
-} else {
-    timeText := seconds . "s"
+; Single timer function that handles all GUIs
+UpdateAllTimers:
+Loop, %GuiCount% {
+    guiNum := A_Index
+    if (Start%guiNum% != "") {
+        startTime := Start%guiNum%
+        elapsed := Round((A_TickCount - startTime)/1000, 0)
+        hours := Floor(elapsed / 3600)
+        minutes := Floor((elapsed - hours * 3600) / 60)
+        seconds := Mod(elapsed, 60)
+        if (hours > 0) {
+            timeText := hours . "h " . minutes . "m " . seconds . "s"
+        } else if (minutes > 0) {
+            timeText := minutes . "m " . seconds . "s"
+        } else {
+            timeText := seconds . "s"
+        }
+        GuiControl, %guiNum%:, Timer%guiNum%, Write time: %timeText%
+    }
 }
-GuiControl, %guiNum%:, Timer%guiNum%, Write time: %timeText%
 return
 
 SaveNote:
-; Stop the timer for this GUI
-currentTimer := "UpdateTimer" . A_Gui
-SetTimer, %currentTimer%, Off
+; Mark this GUI as stopped by clearing its start time
+Start%A_Gui% := ""
 Gui, Submit
 Gosub, ProcessNote
 return
 
 CancelNote:
-; Stop the timer for this GUI
-currentTimer := "UpdateTimer" . A_Gui
-SetTimer, %currentTimer%, Off
+; Mark this GUI as stopped by clearing its start time
+Start%A_Gui% := ""
 Gui, Destroy
 return
 
@@ -200,17 +192,14 @@ return
 CancelEnhanced:
 EnhancedGuiClose:
 EnhancedGuiEscape:
-; Stop any active timer for this GUI
-currentTimer := "UpdateTimer" . A_Gui
-SetTimer, %currentTimer%, Off
+; Mark this GUI as stopped by clearing its start time
+Start%A_Gui% := ""
 Gui, Destroy
 return
 
 GuiEscape:
 GuiClose:
-; Stop any active timer for this GUI
-currentTimer := "UpdateTimer" . A_Gui
-SetTimer, %currentTimer%, Off
+; Mark this GUI as stopped by clearing its start time
+Start%A_Gui% := ""
 Gui, Destroy
-GuiCount := GuiCount - 1
 return

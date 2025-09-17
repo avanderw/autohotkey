@@ -21,6 +21,7 @@ FileCreateDir, %journalPath%
 ; Initialize variables for reliable daily prompts
 lastCheckTime := A_Now
 promptShownToday := false
+guiActive := false  ; Flag to track if GUI is currently shown
 todayDateKey := A_YYYY . A_MM . A_DD
 
 ; Check if we already showed prompt today (in case of script restart)
@@ -55,9 +56,9 @@ if (timeDiff > 300) {  ; More than 5 minutes gap indicates sleep/suspend
 }
 
 ; Check if it's time for the journal prompt (15:00 or later, but before 23:59)
-if (currentHour >= 15 && !promptShownToday) {
-    promptShownToday := true
-    IniWrite, %todayDateKey%, settings.ini, Journal, last-prompt-date
+; Only trigger if GUI is not already active
+if (currentHour >= 15 && !promptShownToday && !guiActive) {
+    ; Don't set promptShownToday here - only set it after user interaction
     Gosub, ShowJournalPrompt
 }
 
@@ -70,7 +71,11 @@ lastCheckTime := currentTime
 return
 
 ShowJournalPrompt:
-SetTimer, ShowJournalPrompt, 86400000
+; Destroy any existing GUI first
+Gui, Destroy
+
+; Set flag to indicate GUI is now active
+guiActive := true
 
 Gui, Add, Text, x20 y20 w560 Center, Daily Journal Time - 3:00 PM Reflection
 Gui, Add, Text, x20 y50 w560 Center c666666, Write two sentences about your day
@@ -93,6 +98,12 @@ if (Sentence1 = "" || Sentence2 = "") {
     return
 }
 
+; Mark as completed for today only after successful save
+promptShownToday := true
+guiActive := false  ; Clear GUI active flag
+todayDateKey := A_YYYY . A_MM . A_DD
+IniWrite, %todayDateKey%, settings.ini, Journal, last-prompt-date
+
 fileName := A_YYYY . A_MM . A_DD . "T" . A_Hour . A_Min . A_Sec
 journalEntry := "# Daily Journal - " . A_YYYY . "-" . A_MM . "-" . A_DD . "`n`n"
 journalEntry .= Sentence1 . " " . Sentence2 . "`n`n"
@@ -103,15 +114,22 @@ MsgBox, 64, Journal Saved, Your journal entry has been saved successfully!
 return
 
 SkipEntry:
+; Mark as completed for today only after user chooses to skip
+promptShownToday := true
+guiActive := false  ; Clear GUI active flag
+todayDateKey := A_YYYY . A_MM . A_DD
+IniWrite, %todayDateKey%, settings.ini, Journal, last-prompt-date
+
 Gui, Destroy
 MsgBox, 64, Entry Skipped, No journal entry saved for today. See you tomorrow at 3 PM!
 return
 
 RemindLater:
 Gui, Destroy
+guiActive := false  ; Clear GUI active flag
 ; Reset the flag so CheckForJournalTime can trigger again
 promptShownToday := false
-SetTimer, ShowJournalPrompt, 1800000
+; Remove the conflicting timer - let CheckForJournalTime handle the next prompt
 MsgBox, 64, Reminder Set, I will remind you again in 30 minutes.
 return
 
@@ -119,6 +137,7 @@ CloseGui:
 GuiClose:
 GuiEscape:
 Gui, Destroy
+guiActive := false  ; Clear GUI active flag
 return
 
 ^+j::
