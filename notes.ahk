@@ -193,7 +193,7 @@ frontMatter .= "write_time: " . DurationText . "`n"
 frontMatter .= "read_time: " . readTimeText . "`n"
 frontMatter .= "word_count: " . wordCount . "`n"
 frontMatter .= "id: " . shortHash . "`n"
-frontMatter .= "---`n`n"
+frontMatter .= "---`n"
 
 finalNote := frontMatter . finalNote
 FileAppend, %finalNote%, %notesPath%\%fileName%.md

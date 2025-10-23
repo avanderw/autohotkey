@@ -15,14 +15,22 @@ if (journalPath="ERROR") {
 }
 StringReplace, journalPath, journalPath, ~, %vUserProfile%, All
 
+; Set up thought logs path
+thoughtLogsPath := RegExReplace(journalPath, "\\[^\\]+$", "\thought-logs")
+
 ; Create journal directory if it doesn't exist
 FileCreateDir, %journalPath%
+FileCreateDir, %thoughtLogsPath%
 
 ; Initialize variables for reliable daily prompts
 lastCheckTime := A_Now
 promptShownToday := false
 guiActive := false  ; Flag to track if GUI is currently shown
 todayDateKey := A_YYYY . A_MM . A_DD
+
+; Initialize thought prompt variables
+nextThoughtPromptTime := 0
+thoughtGuiActive := false
 
 ; Check if we already showed prompt today (in case of script restart)
 IniRead, lastPromptDate, settings.ini, Journal, last-prompt-date
@@ -35,6 +43,9 @@ Gosub, CheckForJournalTime
 
 ; Set up timer to check every minute for 15:00
 SetTimer, CheckForJournalTime, 60000
+
+; Schedule first random thought prompt
+Gosub, ScheduleNextThoughtPrompt
 
 return
 
@@ -68,6 +79,98 @@ if (currentHour = 0 && currentMinute < 2 && promptShownToday) {
 }
 
 lastCheckTime := currentTime
+return
+
+ScheduleNextThoughtPrompt:
+; Schedule next thought prompt at a random time
+; Only schedule during waking hours (9 AM to 4 PM)
+currentHour := A_Hour + 0
+currentTime := A_Now
+
+; If it's past 4 PM or before 9 AM, schedule for tomorrow at 9 AM
+if (currentHour >= 16 || currentHour < 9) {
+    tomorrow := A_Now
+    tomorrow += 1, Days
+    FormatTime, tomorrowDate, %tomorrow%, yyyyMMdd
+    nextThoughtPromptTime := tomorrowDate . "090000"
+} else {
+    ; Generate random time between now and 3 hours from now (or end of day, whichever is sooner)
+    Random, minutesUntilPrompt, 60, 180  ; Between 1 and 3 hours
+    nextTime := A_Now
+    nextTime += minutesUntilPrompt, Minutes
+    
+    ; Check if random time goes past 4 PM
+    FormatTime, nextHour, %nextTime%, HH
+    if (nextHour >= 16) {
+        ; Set to tomorrow 9 AM instead
+        tomorrow := A_Now
+        tomorrow += 1, Days
+        FormatTime, tomorrowDate, %tomorrow%, yyyyMMdd
+        nextThoughtPromptTime := tomorrowDate . "090000"
+    } else {
+        nextThoughtPromptTime := nextTime
+    }
+}
+
+; Set timer to check for thought prompt time
+SetTimer, CheckForThoughtPrompt, 60000
+return
+
+CheckForThoughtPrompt:
+currentTime := A_Now
+
+; Check if it's time for a thought prompt
+if (currentTime >= nextThoughtPromptTime && !thoughtGuiActive && !guiActive) {
+    Gosub, ShowThoughtPrompt
+    Gosub, ScheduleNextThoughtPrompt
+}
+return
+
+ShowThoughtPrompt:
+; Destroy any existing GUI first
+Gui, 2:Destroy
+
+; Set flag to indicate thought GUI is now active
+thoughtGuiActive := true
+
+Gui, 2:Add, Text, x20 y20 w560 Center, Random Thought Capture
+Gui, 2:Add, Text, x20 y50 w560 Center c666666, What are you thinking about right now?
+Gui, 2:Add, Edit, x20 y90 w560 h120 vThoughtText WantReturn
+Gui, 2:Add, Button, x20 y230 w180 h40 gSaveThought, Save Thought
+Gui, 2:Add, Button, x220 y230 w180 h40 gDismissThought, Dismiss
+Gui, 2:Add, Button, x420 y230 w160 h40 gCloseThoughtGui, Cancel
+Gui, 2:Show, w600 h290, Thought Capture
+return
+
+SaveThought:
+Gui, 2:Submit
+if (ThoughtText = "") {
+    MsgBox, 48, Empty Thought, Please write something or dismiss the prompt.
+    Gosub, ShowThoughtPrompt
+    return
+}
+
+thoughtGuiActive := false
+
+fileName := A_YYYY . A_MM . A_DD . "T" . A_Hour . A_Min . A_Sec
+thoughtEntry := "# Thought Log - " . A_YYYY . "-" . A_MM . "-" . A_DD . " " . A_Hour . ":" . A_Min . "`n`n"
+thoughtEntry .= ThoughtText . "`n`n"
+thoughtEntry .= "*Captured at " . A_Hour . ":" . A_Min . " on " . A_YYYY . "-" . A_MM . "-" . A_DD . "*"
+fullPath := thoughtLogsPath . "\" . fileName . ".md"
+FileAppend, %thoughtEntry%, %fullPath%
+MsgBox, 64, Thought Saved, Your thought has been captured!
+return
+
+DismissThought:
+Gui, 2:Destroy
+thoughtGuiActive := false
+return
+
+CloseThoughtGui:
+2GuiClose:
+2GuiEscape:
+Gui, 2:Destroy
+thoughtGuiActive := false
 return
 
 ShowJournalPrompt:
