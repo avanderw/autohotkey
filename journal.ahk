@@ -259,17 +259,3 @@ GuiEscape:
 Gui, Destroy
 guiActive := false  ; Clear GUI active flag
 return
-
-^+j::
-Gosub, ShowJournalPrompt
-return
-
-^+t::
-Gosub, ShowThoughtPrompt
-return
-
-^+n::
-FormatTime, currentTimeDisplay, %A_Now%, yyyy-MM-dd HH:mm:ss
-FormatTime, nextTimeDisplay, %nextThoughtPromptTime%, yyyy-MM-dd HH:mm:ss
-MsgBox, 64, Thought Prompt Debug Info, Current time: %currentTimeDisplay%`nNext prompt: %nextTimeDisplay%`nGUI Active: %guiActive%`nThought GUI Active: %thoughtGuiActive%
-return
