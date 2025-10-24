@@ -29,7 +29,7 @@ guiActive := false  ; Flag to track if GUI is currently shown
 todayDateKey := A_YYYY . A_MM . A_DD
 
 ; Initialize thought prompt variables
-nextThoughtPromptTime := 0
+nextThoughtPromptTime := ""
 thoughtGuiActive := false
 
 ; Check if we already showed prompt today (in case of script restart)
@@ -43,6 +43,9 @@ Gosub, CheckForJournalTime
 
 ; Set up timer to check every minute for 15:00
 SetTimer, CheckForJournalTime, 60000
+
+; Set up timer to check for thought prompts (needs to be active always)
+SetTimer, CheckForThoughtPrompt, 60000
 
 ; Schedule first random thought prompt
 Gosub, ScheduleNextThoughtPrompt
@@ -112,15 +115,23 @@ if (currentHour >= 16 || currentHour < 9) {
     }
 }
 
-; Set timer to check for thought prompt time
-SetTimer, CheckForThoughtPrompt, 60000
+; Show tooltip with next scheduled time for debugging
+FormatTime, displayTime, %nextThoughtPromptTime%, yyyy-MM-dd HH:mm:ss
+TrayTip, Thought Prompt Scheduled, Next thought prompt at: %displayTime%, 5, 1
+SetTimer, RemoveToolTip, 5000
+
+return
+
+RemoveToolTip:
+SetTimer, RemoveToolTip, Off
+ToolTip
 return
 
 CheckForThoughtPrompt:
 currentTime := A_Now
 
 ; Check if it's time for a thought prompt
-if (currentTime >= nextThoughtPromptTime && !thoughtGuiActive && !guiActive) {
+if (nextThoughtPromptTime != "" && currentTime >= nextThoughtPromptTime && !thoughtGuiActive && !guiActive) {
     Gosub, ShowThoughtPrompt
     Gosub, ScheduleNextThoughtPrompt
 }
@@ -159,11 +170,17 @@ thoughtEntry .= "*Captured at " . A_Hour . ":" . A_Min . " on " . A_YYYY . "-" .
 fullPath := thoughtLogsPath . "\" . fileName . ".md"
 FileAppend, %thoughtEntry%, %fullPath%
 MsgBox, 64, Thought Saved, Your thought has been captured!
+
+; Schedule next thought prompt after saving
+Gosub, ScheduleNextThoughtPrompt
 return
 
 DismissThought:
 Gui, 2:Destroy
 thoughtGuiActive := false
+
+; Schedule next thought prompt after dismissing
+Gosub, ScheduleNextThoughtPrompt
 return
 
 CloseThoughtGui:
@@ -245,4 +262,14 @@ return
 
 ^+j::
 Gosub, ShowJournalPrompt
+return
+
+^+t::
+Gosub, ShowThoughtPrompt
+return
+
+^+n::
+FormatTime, currentTimeDisplay, %A_Now%, yyyy-MM-dd HH:mm:ss
+FormatTime, nextTimeDisplay, %nextThoughtPromptTime%, yyyy-MM-dd HH:mm:ss
+MsgBox, 64, Thought Prompt Debug Info, Current time: %currentTimeDisplay%`nNext prompt: %nextTimeDisplay%`nGUI Active: %guiActive%`nThought GUI Active: %thoughtGuiActive%
 return
