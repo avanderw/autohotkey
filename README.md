@@ -4,7 +4,7 @@ A collection of AutoHotkey scripts for personal knowledge management and product
 
 ## Requirements
 
-- [AutoHotkey v1.1](https://www.autohotkey.com/) (not compatible with v2.0)
+- [AutoHotkey v2.0](https://www.autohotkey.com/)
 - Windows operating system
 
 ## Scripts
@@ -20,7 +20,7 @@ Quick task management with priority support.
 Tasks are automatically timestamped with ISO date format (YYYY-MM-DD).
 
 ### Notes (`notes.ahk`)
-Enhanced note-taking with YAML frontmatter, word count, and automatic metadata.
+Enhanced note-taking with YAML frontmatter and optional note-type prefixes.
 
 | Hotkey | Action |
 | --- | --- |
@@ -29,10 +29,9 @@ Enhanced note-taking with YAML frontmatter, word count, and automatic metadata.
 Features:
 - Write timer to track composition time
 - Automatic YAML frontmatter generation
-- Word count and estimated reading time
-- Unique ID generation for each note
 - Title extraction from first line
-- Automatic filename generation with timestamp and title slug
+- Automatic filename generation with timestamp or `idea_` / `wip_` prefix and title slug
+- Collision-safe naming when an `idea_` or `wip_` filename already exists
 
 ### Journal (`journal.ahk`)
 Automated daily journaling system with scheduled prompts.

@@ -1,50 +1,101 @@
-﻿#SingleInstance Force
-#NoEnv
-SendMode Input
-SetWorkingDir %A_ScriptDir%
-EnvGet, vUserProfile, USERPROFILE
+﻿#Requires AutoHotkey v2.0
 
-Menu, Tray, Icon, check-square.ico
-Menu, Tray, Tip, Quick Tasks
+; Quick Tasks Manager
+; Add tasks with optional priority and open refile folder
+; Deprecated: intentionally disabled to fail silently when launched.
 
-; Read settings
-IniRead, inbox, settings.ini, Environment, task-inbox
-if (inbox="ERROR") {
-    InputBox, inbox, Task Inbox Path, Enter the path to your task inbox
-    if ErrorLevel
-        return
-    IniWrite, %inbox%, settings.ini, Environment, task-inbox
+return
+
+SetupConfig()
+SetTrayTip()
+TrayTip("Quick Tasks", "Running", 1)
+SetTimer(() => TrayTip(), 2000)
+
+; Add task via simple input box with priority parsing
+^Numpad0:: {
+    MyGui := Gui()
+    MyGui.Add("Text", "x10 y10 w380", "Priority: (A), (B), or (C) • Date auto-added")
+    taskEdit := MyGui.Add("Edit", "x10 y35 w380 h24 vTaskInput -Multi -WantReturn", "")
+    MyGui.Add("Button", "x10 y70 w185 h30 Default", "Add Task").OnEvent("Click", AddTask)
+    MyGui.Add("Button", "x205 y70 w185 h30", "Cancel").OnEvent("Click", CancelTask)
+    MyGui.OnEvent("Escape", (guiObj) => guiObj.Destroy())
+    MyGui.Title := "Add Task"
+    MyGui.Show("w400 h110")
+    taskEdit.Focus()
 }
-StringReplace, inbox, inbox, ~, %vUserProfile%, All
 
-IniRead, refilePath, settings.ini, Environment, task-refile-path 
-if (refilePath="ERROR") {
-    InputBox, refilePath, Task Refile Path, Enter the path to your task refile folder
-    if ErrorLevel
-        return
-    IniWrite, %refilePath%, settings.ini, Environment, task-refile-path
+CancelTask(GuiCtrlObj, Info) {
+    GuiCtrlObj.Gui.Destroy()
 }
-StringReplace, refilePath, refilePath, ~, %vUserProfile%, All
 
-^Numpad0:: ; add task via simple input box with priority parsing
-    InputBox, task, Add Task, Enter task (start with (A) for priority)
-    if ErrorLevel
+AddTask(GuiCtrlObj, Info) {
+    MyGui := GuiCtrlObj.Gui
+    MyGui.Submit()
+    
+    task := MyGui.Value.TaskInput
+    if (task = "")
         return
-    if (Trim(task)="")
-        return
-        
-    FormatTime, AddedDate,, yyyy-MM-dd
+    
+    addedDate := FormatTime(A_Now, "yyyy-MM-dd")
     
     ; Check for priority pattern (X) at start
-    if RegExMatch(task, "^\(([A-Z])\)\s*(.*)$", match) {
-        task := "(" match1 ") " AddedDate " " match2
+    if (RegExMatch(task, "^\(([A-Z])\)\s*(.*)$", &match)) {
+        task := "(" match[1] ") " addedDate " " match[2]
     } else {
-        task := AddedDate " " task
+        task := addedDate " " task
     }
     
-    FileAppend, %task%`r`n, %inbox%
-return
+    try {
+        FileAppend(task "`n", inbox)
+        MyGui.Destroy()
+        TrayTip("Quick Tasks", "Task added", 1)
+        SetTimer(() => TrayTip(), 2000)
+    } catch as err {
+        MsgBox("Error saving task: " err.What, "Task Error", 48)
+    }
+}
 
-^Numpad3::
-    Run, %refilePath%
-return
+; Open refile folder
+^Numpad3:: {
+    Run(refilePath)
+}
+
+SetupConfig() {
+    global inbox, refilePath
+    
+    userProfile := EnvGet("USERPROFILE")
+    inboxPath := IniRead(A_ScriptDir . "\settings.ini", "Environment", "task-inbox", "")
+    
+    if (inboxPath = "") {
+        result := InputBox(, "Task Inbox Path", "Enter the path to your task inbox")
+        if (result.value = "") {
+            MsgBox("Task inbox not configured", "Configuration", 48)
+            ExitApp()
+        }
+        inboxPath := result.value
+        IniWrite(inboxPath, A_ScriptDir . "\settings.ini", "Environment", "task-inbox")
+    }
+    
+    inbox := StrReplace(inboxPath, "~", userProfile)
+    
+    refilePathConfig := IniRead(A_ScriptDir . "\settings.ini", "Environment", "task-refile-path", "")
+    
+    if (refilePathConfig = "") {
+        result := InputBox(, "Task Refile Path", "Enter the path to your task refile folder")
+        if (result.value = "") {
+            MsgBox("Task refile path not configured", "Configuration", 48)
+            ExitApp()
+        }
+        refilePathConfig := result.value
+        IniWrite(refilePathConfig, A_ScriptDir . "\settings.ini", "Environment", "task-refile-path")
+    }
+    
+    refilePath := StrReplace(refilePathConfig, "~", userProfile)
+}
+
+SetTrayTip() {
+    try {
+        A_TrayMenu.SetIcon(A_ScriptDir . "\check-square.ico", 1)
+    }
+    A_TrayMenu.Tip := "Quick Tasks"
+}
